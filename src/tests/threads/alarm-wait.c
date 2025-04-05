@@ -50,7 +50,7 @@ static void sleeper (void *);
 static void
 test_sleep (int thread_cnt, int iterations) 
 {
-  printf("LOUIS WAS HERE\n");
+  //printf("LOUIS WAS HERE\n");
   struct sleep_test test;
   struct sleep_thread *threads;
   int *output, *op;

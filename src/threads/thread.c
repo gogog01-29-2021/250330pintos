@@ -99,6 +99,7 @@ thread_init (void)
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
+  list_init(&initial_thread->donation_list);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -146,17 +147,17 @@ thread_tick (void)
 
 bool
 
-thread_less_func(struct list_elem *a, struct list_elem *b, void *aux) {
+thread_less_func(const struct list_elem *a, const struct list_elem *b, void *aux) {
 
-  return list_entry(a,struct thread,sleepelem)->priority >
+  return list_entry(a,struct thread,elem)->priority >
 
-         list_entry(b,struct thread,sleepelem)->priority;
+         list_entry(b,struct thread,elem)->priority;
 
 }
 
 void thread_sleep(int64_t ticks){
 	//TODO
- // printf("thread_sleep()\n");
+  //printf("thread_sleep()\n");
   struct thread *t = thread_current();
  // printf("thread: %s\n", t->name);
 
@@ -170,7 +171,7 @@ void thread_sleep(int64_t ticks){
     t->local_tick = ticks;
    // list_push_back(&sleep_list, &t->sleepelem);
 
-    list_insert_ordered (&sleep_list, &t->sleepelem , &thread_less_func , NULL);
+    list_insert_ordered (&sleep_list, &t->sleepelem , (list_less_func *)&thread_less_func , NULL);
    // list_sort(&sleep_list , &thread_less_func , NULL);
    // printf("list size: %lu\n, localtik: %i\n", list_size(&sleep_list), t->local_tick);
 
@@ -180,21 +181,10 @@ void thread_sleep(int64_t ticks){
   intr_set_level (old_level);
 }
 
-void thread_test_loop(){
-  //DEBUGGER FUNCTION, CHECKING THE FOR LOOP ON THE SLEEP QEUEU
-  struct list_elem *e;
-  for (e = list_begin (&ready_list); e != list_end (&ready_list);
-  e = list_next (e))
-      {
-        struct thread *t = list_entry (e, struct thread, elem);
-        printf("\t>>>THREAD NAME: %s\n", t->name);
-      }
-
-}
 void thread_wakeup(int64_t ticks){
 	//TODO
   struct list_elem *e;
-  //printf("\tCurrent tick: (thread wakeup) %i\n", ticks);
+ // printf("\tCurrent tick: (thread wakeup) %i\n", ticks);
   //printf("list size: %lu\n", list_size(&sleep_list));
 
   for (e = list_begin (&sleep_list); e != list_end (&sleep_list);
@@ -202,7 +192,7 @@ void thread_wakeup(int64_t ticks){
       {
         struct thread *t = list_entry (e, struct thread, sleepelem);
         if (t->local_tick <= ticks){ //t->status == THREAD_BLOCKED && 
-          printf("Selected thread: %s, status: %d\n", t->name, t->status);
+         // printf("Selected thread: %s, status: %d\n", t->name, t->status);
 
           //printf("ready list size: %lu\n", list_size(&ready_list));
           list_remove(e);
@@ -215,9 +205,6 @@ void thread_wakeup(int64_t ticks){
          // printf("ready list size: %lu\n", list_size(&ready_list));
         }
       }
-
-
-	
 }
 
 
@@ -230,7 +217,7 @@ thread_print_stats (void)
 }
 
 /*returns true if a->prioryt > b->priority*/
-bool thread_comp_priority(struct thread a*, struct thread *b){
+bool thread_comp_priority(struct thread *a, struct thread *b){
   return (a->priority > b->priority);
 }
 /* Creates a new kernel thread named NAME with the given initial
@@ -269,6 +256,8 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   t->init_priority = priority;
+  t->wait_on_lock = NULL;
+  list_init(&t->donation_list);
   tid = t->tid = allocate_tid ();
 
   /* Prepare thread for first run by initializing its stack.
@@ -339,7 +328,7 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   //list_push_back (&ready_list, &t->elem);
   //list_sort(&ready_list , &thread_less_func , NULL);
-  list_insert_ordered (&ready_list, &t->elem , &thread_less_func , NULL);
+  list_insert_ordered (&ready_list, &t->elem , (list_less_func *)&thread_less_func , NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -412,7 +401,7 @@ thread_yield (void)
   if (cur != idle_thread) 
     //list_push_back (&ready_list, &cur->elem);
     //list_sort(&ready_list , &thread_less_func , NULL);
-    list_insert_ordered (&ready_list, &t->elem , &thread_less_func , NULL);
+    list_insert_ordered (&ready_list, &thread_current()->elem ,(list_less_func *) &thread_less_func , NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -440,10 +429,11 @@ void
 thread_set_priority (int new_priority) //????????????
 {
   struct thread *cur = thread_current ();
+  cur->init_priority = new_priority;
   int init_priority = cur->init_priority;
-  cur->priority = (init_priority > new_priority)? init_priority : new_priority;
-  list_sort(&ready_list , &thread_less_func , NULL);
-  //thread_current ()->priority = new_priority;
+  cur->priority = (init_priority > cur->priority)? init_priority : cur->priority;
+  list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL); //?? not sure about this one
+  
 
   struct list_elem *e;
   bool istop = true;
@@ -694,9 +684,10 @@ allocate_tid (void)
   tid_t tid;
 
   lock_acquire (&tid_lock);
+ 
   tid = next_tid++;
   lock_release (&tid_lock);
-
+ // printf("released lock\n");
   return tid;
 }
 

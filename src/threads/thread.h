@@ -123,11 +123,11 @@ void thread_init (void);
 void thread_start (void);
 void thread_sleep(int64_t ticks);
 void thread_wakeup(int64_t ticks);
-void thread_test_loop();
+
 void thread_tick (void);
 void thread_print_stats (void);
-bool thread_less_func(struct list_elem *a, struct list_elem *b, void *aux);
-bool thread_comp_priority(struct thread a*, struct thread *b);
+bool thread_less_func(const struct list_elem *a, const struct list_elem *b, void *aux);
+bool thread_comp_priority(struct thread *a, struct thread *b);
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 

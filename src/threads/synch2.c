@@ -1,4 +1,4 @@
-/*nstructional operating system.  The Nachos copyright notice
+nstructional operating system.  The Nachos copyright notice
    is reproduced in full below. */
 
 /* Copyright (c) 1992-1996 The Regents of the University of California.
@@ -70,9 +70,9 @@ sema_down (struct semaphore *sema)
       struct thread *t = thread_current ();
 
       //if (t != idle_thread){
-        list_insert_ordered (&sema->waiters, &t->semaelem ,  (list_less_func *) &thread_less_func , NULL);
+        list_insert_ordered (&sema->waiters, &t->semaelem , &thread_less_func , NULL);
         thread_block ();
-      //}
+     // }
      // list_push_back (&sema->waiters, &thread_current ()->elem);
      
     }
@@ -394,4 +394,4 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
-//ASD!!2
+
