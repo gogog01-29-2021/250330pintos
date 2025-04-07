@@ -44,7 +44,6 @@ void
 sema_init (struct semaphore *sema, unsigned value) 
 {
   ASSERT (sema != NULL);
-
   sema->value = value;
   list_init (&sema->waiters);
 }
@@ -185,9 +184,10 @@ void
 lock_init (struct lock *lock)
 {
   ASSERT (lock != NULL);
-
+ // printk("LOCK INIT COMPLTE\n");
   lock->holder = NULL;
   sema_init (&lock->semaphore, 1);
+
 }
 
 void donate_priority(void){
@@ -220,9 +220,11 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
   struct thread *t = thread_current ();
 
-
+ 
   if (lock->holder == NULL){
     //no holder
+   // printf("new lock holder!\n");
+  // printf("LOCK ACQUIRED -> thread name: %s\n", t->name);
     sema_down (&lock->semaphore);
     lock->holder = t;
   }
@@ -230,6 +232,7 @@ lock_acquire (struct lock *lock)
     t->wait_on_lock = lock;
     list_push_back (&lock->holder->donation_list, &t->donationelem);
     donate_priority();
+    //thread_sleep(1);
   }
 
 
@@ -258,22 +261,33 @@ lock_try_acquire (struct lock *lock)
 
 void refresh_priority(void){
   struct thread *cur = thread_current();
+ // printf("refresh_priority()\n");
+
+
   if (list_size(&cur->donation_list) == 0){
     cur->priority = cur->init_priority;
   }
   else {
     int maxpriority = 0;
-    while(!list_empty(&cur->donation_list)){
-      
-      struct list_elem *e = list_pop_front (&cur->donation_list);
-      struct thread *donor = list_entry (e, struct thread, donationelem);
-      if (donor->priority > maxpriority){
-        maxpriority = donor->priority;
+   // printf(">>donor size: %i\n", list_size(&cur->donation_list));
+
+   struct list_elem *e;
+
+    for (e = list_begin (&cur->donation_list); e != list_end (&cur->donation_list);
+        e = list_next (e))
+      {
+       
+        struct thread *donor = list_entry (e, struct thread, donationelem);
+
+        if (donor->priority > maxpriority){
+          maxpriority = donor->priority;
+        }
+
       }
-    }
-    if (maxpriority > cur->priority){
-      cur->priority = cur->init_priority;
-    }
+    // printf(">>donor size: %i\n", list_size(&cur->donation_list));
+      if (maxpriority > cur->priority){
+        cur->priority = maxpriority;
+      }
   }
 }
 
@@ -287,9 +301,26 @@ lock_release (struct lock *lock)
 {
   ASSERT (lock != NULL);
   ASSERT (lock_held_by_current_thread (lock));
+  struct thread *cur = thread_current();
 
+ // printf("LOCK RELEASE -> thread name: %s\n", cur->name);
   lock->holder = NULL;
   refresh_priority();
+ //REMOVE THE DONORS LIST
+  //printf(">>donor size: %i\n", list_size(&cur->donation_list));
+  struct list_elem *e;
+  for (e = list_begin (&cur->donation_list); e != list_end (&cur->donation_list);
+      e = list_next (e))
+    {
+     
+      struct thread *donor = list_entry (e, struct thread, donationelem);
+
+      if (donor->wait_on_lock == lock){
+        list_remove(e);
+      }
+
+    }
+   // printf(">>donor size: %i\n", list_size(&cur->donation_list));
   sema_up (&lock->semaphore);
 }
 
@@ -394,4 +425,4 @@ cond_broadcast (struct condition *cond, struct lock *lock)
   while (!list_empty (&cond->waiters))
     cond_signal (cond, lock);
 }
-//ASD!!2
+//ASD!!2222

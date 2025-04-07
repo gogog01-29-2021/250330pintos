@@ -99,7 +99,7 @@ thread_init (void)
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
-  list_init(&initial_thread->donation_list);
+  //list_init(&initial_thread->donation_list);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
 }
@@ -218,6 +218,7 @@ thread_print_stats (void)
 
 /*returns true if a->prioryt > b->priority*/
 bool thread_comp_priority(struct thread *a, struct thread *b){
+ // printf(">>>%i  a: %i,  b: %i\n",(a->priority > b->priority), a->priority, b->priority);
   return (a->priority > b->priority);
 }
 /* Creates a new kernel thread named NAME with the given initial
@@ -239,6 +240,7 @@ tid_t
 thread_create (const char *name, int priority,
                thread_func *function, void *aux) 
 {
+ // printf("thread_create()\n");
   struct thread *t;
   struct kernel_thread_frame *kf;
   struct switch_entry_frame *ef;
@@ -255,9 +257,9 @@ thread_create (const char *name, int priority,
 
   /* Initialize thread. */
   init_thread (t, name, priority);
-  t->init_priority = priority;
+ // t->init_priority = priority;
   t->wait_on_lock = NULL;
-  list_init(&t->donation_list);
+ // list_init(&t->donation_list);
   tid = t->tid = allocate_tid ();
 
   /* Prepare thread for first run by initializing its stack.
@@ -283,10 +285,14 @@ thread_create (const char *name, int priority,
   intr_set_level (old_level);
 
   /* Add to run queue. */
+  
   thread_unblock (t);
+ 
   struct thread *cur = thread_current();
-
-  if (thread_comp_priority(t,cur)){
+  
+  //printf("cur thread: %s p: %i, new thread: %s p: %i\n", cur->name, cur->priority,  t->name, t->priority);
+  if ((int)thread_comp_priority(t,cur)){
+   // msg("new better!");
     thread_yield();
   }
   return tid;
@@ -401,7 +407,7 @@ thread_yield (void)
   if (cur != idle_thread) 
     //list_push_back (&ready_list, &cur->elem);
     //list_sort(&ready_list , &thread_less_func , NULL);
-    list_insert_ordered (&ready_list, &thread_current()->elem ,(list_less_func *) &thread_less_func , NULL);
+    list_insert_ordered (&ready_list, &cur->elem ,(list_less_func *) &thread_less_func , NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -428,26 +434,37 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) //????????????
 {
+
+
   struct thread *cur = thread_current ();
+  /*if (cur == initial_thread){
+    printf("INIT THREAD\n");
+    return;
+  }*/
+  //printf("setting thread %s: new prio %i, current prio: %i, current initprio: %i\n", cur->name, new_priority, cur->priority,cur->init_priority);
   cur->init_priority = new_priority;
-  int init_priority = cur->init_priority;
-  cur->priority = (init_priority > cur->priority)? init_priority : cur->priority;
-  list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL); //?? not sure about this one
+  //int init_priority = cur->init_priority;
+  //cur->priority = (cur->priority > init_priority)? cur->priority : init_priority;
   
+ // list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL); //?? not sure about this one
+  refresh_priority();
 
   struct list_elem *e;
   bool istop = true;
-
+ // printf(">>ready lst size: %i\n", list_size(&ready_list));
   for (e = list_begin (&ready_list); e != list_end (&ready_list);
   e = list_next (e))
   {
     struct thread *t = list_entry (e, struct thread, elem);
     if (t->priority > cur->priority){
+     // printf("found bigger!\n");
       istop = false;
       break;
     }
   }
+  //printf("POST setting thread %s: new prio %i, current prio: %i, current initprio: %i\n", cur->name, new_priority, cur->priority,cur->init_priority);
   if (!istop){
+   // printf("BOUTTA YIELD!\n");
     thread_yield();
   }
 
@@ -576,8 +593,11 @@ init_thread (struct thread *t, const char *name, int priority)
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
+  t->init_priority = priority;
   t->magic = THREAD_MAGIC;
+  list_init(&t->donation_list);
   list_push_back (&all_list, &t->allelem);
+  
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

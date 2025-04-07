@@ -30,6 +30,7 @@ test_priority_donate_one (void)
   ASSERT (thread_get_priority () == PRI_DEFAULT);
 
   lock_init (&lock);
+ // printf("asd\n");
   lock_acquire (&lock);
   thread_create ("acquire1", PRI_DEFAULT + 1, acquire1_thread_func, &lock);
   msg ("This thread should have priority %d.  Actual priority: %d.",
