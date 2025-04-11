@@ -97,7 +97,7 @@ struct thread
 
     struct list_elem sleepelem;   //tiagos solution
 
-    struct list_elem semaelem;
+    //struct list_elem semaelem;
 
     struct list_elem donationelem;
 
@@ -128,6 +128,7 @@ void thread_tick (void);
 void thread_print_stats (void);
 bool thread_less_func(const struct list_elem *a, const struct list_elem *b, void *aux);
 bool thread_comp_priority(struct thread *a, struct thread *b);
+
 typedef void thread_func (void *aux);
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 

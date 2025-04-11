@@ -413,6 +413,8 @@ thread_yield (void)
   intr_set_level (old_level);
 }
 
+
+
 /* Invoke function 'func' on all threads, passing along 'aux'.
    This function must be called with interrupts off. */
 void
@@ -446,9 +448,9 @@ thread_set_priority (int new_priority) //????????????
   //int init_priority = cur->init_priority;
   //cur->priority = (cur->priority > init_priority)? cur->priority : init_priority;
   
- // list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL); //?? not sure about this one
+  //?? not sure about this one
   refresh_priority();
-
+  //list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL);
   struct list_elem *e;
   bool istop = true;
  // printf(">>ready lst size: %i\n", list_size(&ready_list));
