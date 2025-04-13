@@ -179,6 +179,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	ticks++;
 
 
+ 
+  
 
   if (ticks % 100 == 0){
     //TODO
@@ -191,7 +193,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
     //RECALC PRIORITY OF ALL THREADS IN THE LIST
     recomp_priorities();
   }
- 
+
   thread_tick ();
   thread_wakeup(ticks);
 }
