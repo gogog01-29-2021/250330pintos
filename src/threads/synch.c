@@ -229,8 +229,17 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+
   struct thread *t = thread_current ();
 
+  /*  if (0){ //
+  
+    sema_down (&lock->semaphore);
+    lock->holder = t;
+    t->wait_on_lock = NULL;
+    
+    return;
+  }*/
  
   if (lock->holder){
     t->wait_on_lock = lock;
@@ -313,11 +322,15 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
  // struct thread *cur = thread_current();
 
- // printf("LOCK RELEASE -> thread name: %s\n", cur->name);
+/*  if (0){ //thread_mlfqs
+      lock->holder = NULL;
+      sema_up (&lock->semaphore);
+      return;
+  }*/
+
+
   lock->holder = NULL;
 
- //REMOVE THE DONORS LIST
-  //printf(">>donor size: %i\n", list_size(&cur->donation_list));
   struct list_elem *e;
   struct semaphore *sema = &lock->semaphore;
   for (e = list_begin (&sema->waiters); e != list_end (&sema->waiters); e = list_next (e))
@@ -332,8 +345,7 @@ lock_release (struct lock *lock)
     }
 
   refresh_priority();
-   // printf(">>donor size: %i\n", list_size(&cur->donation_list));
-   sema_up (&lock->semaphore);
+  sema_up (&lock->semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false

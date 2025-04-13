@@ -24,6 +24,26 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+//FPA MACROS
+#define P 17
+#define Q 14
+#define F (1 << Q)
+#define TOFIXED(n) ( (n) * F )
+#define TOINT(n) ( (n) / (F))
+#define TOINT_NEAREST(n) ( ((n) >= 0)? ( ((n)+F/2)/F ) :  ( ((n)-F/2)/F ))
+#define ADD(x,y) ( (x) + (y))
+#define SUB(x,y) ( (x) - (y))
+#define ADD_INT(x,i)  (( (x) + TOFIXED(i) ))
+#define SUB_INT(x,i) ( (x) - TOFIXED(i))
+#define MUL(x,y) ( ( (int64_t)x) * (y) / F)
+#define MUL_INT(x,i) ( (x) * (i)  )
+#define DIV(x,y) ( ( (int64_t)x) * F / (y))
+#define DIV_INT(x,i) ((x) / (i))
+
+#define K_AVG DIV(TOFIXED(59), TOFIXED(60))
+#define K_READY DIV(TOFIXED(1), TOFIXED(60))
+
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -90,6 +110,8 @@ struct thread
     int64_t local_tick; //ADDED LOCAL TICK STEP 0
     int priority;                       /* Priority. */
     int init_priority;
+    int nice;
+    int recent_cpu;
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Shared between thread.c and synch.c. */
@@ -104,6 +126,8 @@ struct thread
     struct lock *wait_on_lock;
 
     struct list donation_list;
+
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -124,9 +148,14 @@ void thread_start (void);
 void thread_sleep(int64_t ticks);
 void thread_wakeup(int64_t ticks);
 
-void thread_tick (void);
+void recomp_stats(void);
+void recomp_priorities(void);
+int thread_count_ready(void);
+void thread_tick (void); //CHANGE THE ORIGINAL PROTO
 void thread_print_stats (void);
 bool thread_less_func(const struct list_elem *a, const struct list_elem *b, void *aux);
+void thread_compute_priority(struct thread *t); //BSD compute priority for an indivual thread
+void thread_compute_recentcpu(struct thread *t);
 bool thread_comp_priority(struct thread *a, struct thread *b);
 
 typedef void thread_func (void *aux);

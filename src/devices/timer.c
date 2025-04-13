@@ -174,10 +174,23 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-	//TODO
- // thread_test_loop();
+
 
 	ticks++;
+
+
+
+  if (ticks % 100 == 0){
+    //TODO
+    //RECALC LOAD AVG AND CURRENT THREADS USED CPU TIME
+    recomp_stats();
+  }
+
+  if (ticks % 4 == 0){
+    //TODO
+    //RECALC PRIORITY OF ALL THREADS IN THE LIST
+    recomp_priorities();
+  }
  
   thread_tick ();
   thread_wakeup(ticks);
