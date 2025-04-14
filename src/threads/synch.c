@@ -232,9 +232,9 @@ lock_acquire (struct lock *lock)
   struct thread *t = thread_current ();
 
   if (thread_mlfqs){
-    lock->holder = t;
-    sema_down (&lock->semaphore);
     
+    sema_down (&lock->semaphore);
+    lock->holder = t;
     return;
   }
  

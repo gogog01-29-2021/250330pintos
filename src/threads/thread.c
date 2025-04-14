@@ -133,7 +133,7 @@ void
 thread_tick (void) 
 {
   struct thread *t = thread_current ();
-
+  
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
@@ -147,6 +147,9 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
+  if (thread_mlfqs){
+    t->recent_cpu++;
+  }
 }
 
 bool
@@ -423,7 +426,9 @@ void thread_compute_priority(struct thread *t){
   t->priority = new_priority;
 }
 void thread_compute_recentcpu(struct thread *t){
-  t->recent_cpu = TOINT(decay) * t->recent_cpu + t->nice; //TOFINISH
+  
+  t->recent_cpu = TOINT(ADD_INT(MUL_INT(decay,t->recent_cpu), t->nice)); //TOFINISH
+  //printf(">>> rcpu: %i\n", t->recent_cpu);
 }
 
 int thread_count_ready(){
@@ -448,8 +453,8 @@ void recomp_stats(){
     return;
   }
   //TODO
-  int t1 = MUL(load_avg,2);
-  int t2 = ADD(MUL(load_avg,2), 1);
+  int t1 = MUL_INT(load_avg,2);
+  int t2 = ADD_INT(MUL_INT(load_avg,2), 1);
   int fixed_readycnt = TOFIXED(thread_count_ready());
 
   decay = DIV(t1,t2);
