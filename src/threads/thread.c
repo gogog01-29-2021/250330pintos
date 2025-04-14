@@ -467,6 +467,7 @@ void recomp_priorities(){
     return;
   }
   thread_foreach( (thread_action_func *)&thread_compute_priority, NULL);
+  list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL);
  
 }
 
@@ -540,7 +541,7 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  thread_current()->nice = nice;
+  thread_current()->nice = (nice > 20)? 20 : (nice < -20)? -20 : nice;
 }
 
 /* Returns the current thread's nice value. */

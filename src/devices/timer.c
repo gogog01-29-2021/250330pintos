@@ -180,8 +180,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
 
  
-  
-
   if (ticks % 100 == 0){
     //TODO
     //RECALC LOAD AVG AND CURRENT THREADS USED CPU TIME
