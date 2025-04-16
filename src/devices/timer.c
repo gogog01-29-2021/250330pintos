@@ -179,20 +179,25 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	ticks++;
 
 
- 
-  if (ticks % 100 == 0){
-    //TODO
-    //RECALC LOAD AVG AND CURRENT THREADS USED CPU TIME
-    recomp_stats();
-  }
-
-  if (ticks % 4 == 0){
-    //TODO
-    //RECALC PRIORITY OF ALL THREADS IN THE LIST
-    recomp_priorities();
-  }
 
   thread_tick ();
+  int64_t current_ticks = timer_ticks();
+  if (current_ticks  % 4 == 0){
+    //TODO
+    //RECALC PRIORITY OF ALL THREADS IN THE LIST
+    //enum intr_level old_level = intr_disable();
+    recomp_priorities();
+    //intr_set_level(old_level);
+  }
+  if (current_ticks  % 100 == 0){
+    //TODO
+    //RECALC LOAD AVG AND CURRENT THREADS USED CPU TIME
+    //enum intr_level old_level = intr_disable();
+    recomp_stats();
+    //intr_set_level(old_level);
+  }
+
+ 
   thread_wakeup(ticks);
 }
 

@@ -42,6 +42,9 @@ typedef int tid_t;
 
 #define K_AVG DIV(TOFIXED(59), TOFIXED(60))
 #define K_READY DIV(TOFIXED(1), TOFIXED(60))
+#define PRI_MAX_FIXED TOFIXED(PRI_MAX)
+#define PRI_MIN_FIXED TOFIXED(PRI_MIN)
+#define FIXED_4 TOFIXED(4)
 
 
 /* A kernel thread or user process.
@@ -149,6 +152,7 @@ void thread_sleep(int64_t ticks);
 void thread_wakeup(int64_t ticks);
 
 void recomp_stats(void);
+void thread_test_preemption(void);
 void recomp_priorities(void);
 int thread_count_ready(void);
 void thread_tick (void); //CHANGE THE ORIGINAL PROTO

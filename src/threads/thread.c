@@ -147,8 +147,8 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
-  if (thread_mlfqs){
-    t->recent_cpu++;
+  if (thread_mlfqs && t != idle_thread){
+    t->recent_cpu = ADD_INT(t->recent_cpu, 1);
   }
 }
 
@@ -421,13 +421,21 @@ thread_yield (void)
 }
 
 void thread_compute_priority(struct thread *t){
-  int new_priority = PRI_MAX - (t->recent_cpu / 4) - (t->nice * 2);
-  new_priority = (new_priority > PRI_MAX)? PRI_MAX : ((new_priority < PRI_MIN)?  0 : new_priority);
-  t->priority = new_priority;
+  if (t != idle_thread){
+    int nice2_fixed = MUL_INT(TOFIXED(t->nice), 2);
+    int new_priority = TOINT_NEAREST(SUB(SUB(PRI_MAX_FIXED, DIV(t->recent_cpu, FIXED_4)), nice2_fixed)); 
+    new_priority = (new_priority > PRI_MAX)? PRI_MAX : ((new_priority < PRI_MIN)?  0 : new_priority);
+  /*  if (strcmp(t->name, "load 0") == 0){
+      printf(">>th: %s, n: %i, p: %i\n", t->name, t->nice,t->priority );
+    }*/
+    t->priority = new_priority;
+  }
 }
 void thread_compute_recentcpu(struct thread *t){
   
-  t->recent_cpu = TOINT(ADD_INT(MUL_INT(decay,t->recent_cpu), t->nice)); //TOFINISH
+  if (t != idle_thread){
+    t->recent_cpu = ADD_INT(MUL(decay,t->recent_cpu), t->nice);
+  }
   //printf(">>> rcpu: %i\n", t->recent_cpu);
 }
 
@@ -454,10 +462,11 @@ void recomp_stats(){
   }
   //TODO
   int t1 = MUL_INT(load_avg,2);
-  int t2 = ADD_INT(MUL_INT(load_avg,2), 1);
+  int t2 = ADD_INT(t1, 1);
   int fixed_readycnt = TOFIXED(thread_count_ready());
-
+ 
   decay = DIV(t1,t2);
+  //printf(">>>decay: %f\n", (float)decay / (float)F);
   load_avg = ADD(MUL(K_AVG, load_avg), MUL(K_READY,fixed_readycnt)) ;
   //printf(">>>> load avg: %i", load_avg);
   thread_foreach( (thread_action_func *)&thread_compute_recentcpu, NULL);
@@ -466,9 +475,11 @@ void recomp_priorities(){
   if (!thread_mlfqs){
     return;
   }
+  struct thread *cur = thread_current();
+  int prev_p = cur->priority;
   thread_foreach( (thread_action_func *)&thread_compute_priority, NULL);
   list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL);
- 
+  thread_test_preemption();
 }
 
 
@@ -501,11 +512,11 @@ thread_set_priority (int new_priority) //????????????
     return;
   }*/
   //printf("setting thread %s: new prio %i, current prio: %i, current initprio: %i\n", cur->name, new_priority, cur->priority,cur->init_priority);
-  if (!thread_mlfqs){
-    cur->init_priority = new_priority;
-    refresh_priority();
+  if (thread_mlfqs){
+    return;
   }
- 
+  cur->init_priority = new_priority;
+  refresh_priority();
 
   //list_sort(&ready_list , (list_less_func *)&thread_less_func , NULL);
   struct list_elem *e;
@@ -530,6 +541,26 @@ thread_set_priority (int new_priority) //????????????
 
 }
 
+void thread_test_preemption(){
+  struct thread *cur = thread_current();
+  struct list_elem *e;
+  bool istop = true;
+ 
+  for (e = list_begin (&ready_list); e != list_end (&ready_list);
+  e = list_next (e))
+  {
+    struct thread *t = list_entry (e, struct thread, elem);
+    if (t->priority > cur->priority){
+      istop = false;
+      break;
+    }
+  }
+ 
+  if (!istop && !intr_context()){
+    thread_yield();
+  }
+}
+
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
@@ -541,30 +572,44 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  thread_current()->nice = (nice > 20)? 20 : (nice < -20)? -20 : nice;
+  enum intr_level old_level = intr_disable ();
+  int new_val = (nice > 20)? 20 : (nice < -20)? -20 : nice;
+  struct thread *cur = thread_current();
+  cur->nice = new_val;
+  thread_compute_priority(cur);
+  thread_test_preemption();
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  return  thread_current()->nice;
+  enum intr_level old_level = intr_disable ();
+  int n = thread_current()->nice;
+  intr_set_level(old_level);
+  return  n;
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  
-  return MUL(load_avg,100);
+  enum intr_level old_level = intr_disable ();
+  int res = MUL(load_avg,100);
+  intr_set_level(old_level);
+  return res;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  
-  return thread_current()->recent_cpu * 100;
+  //int fixed_rcpu = TOFIXED(thread_current()->recent_cpu);
+  enum intr_level old_level = intr_disable();
+  int res = TOINT_NEAREST(MUL_INT(thread_current()->recent_cpu, 100));
+  intr_set_level(old_level);
+  return res;//TOINT_NEAREST(MUL_INT(fixed_rcpu, 100)) ;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
