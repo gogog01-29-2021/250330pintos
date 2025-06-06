@@ -7,7 +7,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "devices/block.h" // For block_sector_t block?
-#include <bitmap.h> // For bitmap functions
+#include <bitmap.h> // For bitmap functions Q.why bitmap used?  vs fixed 
 
 
 /* The swap device. */
@@ -87,6 +87,6 @@ swap_out (struct page *p)
   p->file = NULL;
   p->file_offset = 0;
   p->file_bytes = 0;
-
+d
   return true;
 }

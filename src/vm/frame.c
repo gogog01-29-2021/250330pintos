@@ -128,7 +128,8 @@ void
 frame_lock (struct page *p) 
 {
   /* A frame can be asynchronously removed, but never inserted. */
-  struct frame *f = p->frame;
+  struct frame *f = p->frame; //How does it connected to page?
+  
   if (f != NULL) 
     {
       lock_acquire (&f->lock);
