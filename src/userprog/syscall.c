@@ -15,6 +15,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/page.h"
+#include <unistd.h>
 
 
 static int sys_halt (void);
