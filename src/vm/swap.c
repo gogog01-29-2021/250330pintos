@@ -6,9 +6,12 @@
 #include "vm/page.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/block.h" // For block_sector_t block?
+#include <bitmap.h> // For bitmap functions
+
 
 /* The swap device. */
-static struct block *swap_device;
+static struct block *swap_block; //swap_block=    2.block_get_role(BLOCK_SWAP);
 
 /* Used swap pages. */
 static struct bitmap *swap_bitmap;
@@ -23,14 +26,14 @@ static struct lock swap_lock;
 void
 swap_init (void)
 {
-  swap_device = block_get_role (BLOCK_SWAP);
-  if (swap_device == NULL)
+  swap_block = block_get_role (BLOCK_SWAP);
+  if (swap_block == NULL)
     {
       printf ("no swap device--swap disabled\n");
       swap_bitmap = bitmap_create (0);
     }
   else
-    swap_bitmap = bitmap_create (block_size (swap_device)
+    swap_bitmap = bitmap_create (block_size (swap_block)  //page size?
                                  / PAGE_SECTORS);
   if (swap_bitmap == NULL)
     PANIC ("couldn't create swap bitmap");
@@ -49,7 +52,7 @@ swap_in (struct page *p)
   ASSERT (p->sector != (block_sector_t) -1);
 
   for (i = 0; i < PAGE_SECTORS; i++)
-    block_read (swap_device, p->sector + i,
+    block_read (swap_block, p->sector + i,
                 p->frame->base + i * BLOCK_SECTOR_SIZE);
   bitmap_reset (swap_bitmap, p->sector / PAGE_SECTORS);
   p->sector = (block_sector_t) -1;
@@ -76,7 +79,7 @@ swap_out (struct page *p)
   /*  Write out page sectors for each modified block. */
   for (i = 0; i < PAGE_SECTORS; i++)
   {
-    block_write (swap_device, p->sector + i,
+    block_write (swap_block, p->sector + i,
                  (uint8_t *) p->frame->base + i * BLOCK_SECTOR_SIZE);
   }
 
