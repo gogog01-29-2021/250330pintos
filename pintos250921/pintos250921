@@ -1,0 +1,109 @@
+1. C++ Standards Migration
+
+  // Old PintOS C → Modern C++
+  // Replace C structs with classes
+  struct thread {
+      tid_t tid;
+      char name[16];
+  };
+
+  // Becomes:
+  class Thread {
+  private:
+      std::atomic<tid_t> tid_;
+      std::string name_;
+  public:
+      Thread(const std::string& name) : name_(name) {}
+  };
+
+  2. Memory Management
+
+  // Replace manual memory management
+  void* old_alloc = palloc_get_page(PAL_ZERO);
+
+  // With smart pointers
+  auto memory = std::make_unique<Page>();
+
+  3. Threading & Synchronization
+
+  // Replace PintOS threading
+  #include <thread>
+  #include <mutex>
+  #include <condition_variable>
+
+  std::thread worker_thread;
+  std::mutex data_mutex;
+
+  CSP Integration Requirements
+
+  1. Python Runtime Support
+
+  // Need to embed Python interpreter
+  #include <Python.h>
+
+  class CSPRuntime {
+      void initialize() {
+          Py_Initialize();
+          // Load CSP modules
+      }
+  };
+
+  2. Network Stack
+
+  // CSP needs TCP/IP for adapters
+  // PintOS has minimal networking
+  // Would need full TCP/IP stack implementation
+
+  3. File System Extensions
+
+  // CSP needs:
+  // - Large file support
+  // - Directory operations  
+  // - File locking
+  // - Memory-mapped files
+
+  Practical Implementation Path
+
+  Phase 1: Compatibility Layer
+
+  // pintos_compat.h
+  namespace pintos {
+      class KernelAPI {
+      public:
+          static void* alloc_page();
+          static void create_thread(void (*func)());
+          static void filesystem_init();
+      };
+  }
+
+  Phase 2: CSP Integration
+
+  // csp_pintos_bridge.cpp
+  #include "pintos_compat.h"
+  #include <csp/csp.h>
+
+  class CSPPintOSAdapter {
+      void run_csp_graph() {
+          // Initialize PintOS subsystems
+          pintos::KernelAPI::filesystem_init();
+
+          // Run CSP application
+          csp::run(my_graph);
+      }
+  };
+
+  Phase 3: Build System
+
+  # CMakeLists.txt
+  cmake_minimum_required(VERSION 3.20)
+  project(CSP_PintOS)
+
+  # Link PintOS libraries
+  find_library(PINTOS_KERNEL pintos_kernel)
+  find_package(Python3 COMPONENTS Interpreter Development)
+
+  target_link_libraries(csp_pintos
+      ${PINTOS_KERNEL}
+      Python3::Python
+      csp_library
+  )
